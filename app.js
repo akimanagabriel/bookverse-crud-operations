@@ -1,11 +1,20 @@
 const pool = require("./db");
-
+const session = require("express-session");
 const express = require("express");
 const cors = require("cors");
+const route = require("./authentication");
+const auth = require("./middleware");
 
 const app = express();
+
+// configure express session
+app.use(session({ secret: "mykey-123" }));
+
 app.use(cors()); // accept request client's request
 app.use(express.json()); // read data from a clients
+
+// join authentication  with created app
+app.use(route);
 
 // insert
 app.post("/book", async (req, res) => {
@@ -18,7 +27,7 @@ app.post("/book", async (req, res) => {
 });
 
 // read all books
-app.get("/book", async (req, res) => {
+app.get("/book", auth, async (req, res) => {
   const [books] = await pool.query("SELECT * FROM books");
   res.send(books);
 });
@@ -49,6 +58,10 @@ app.delete("/book/:id", async (req, res) => {
 
   await pool.query("DELETE FROM books WHERE id = ? ", [id]);
   res.send("Book deleted!");
+});
+
+app.use((req, res) => {
+  res.status(404).send("Route not fount in this application");
 });
 
 app.listen(5000, () => console.log("server running on port 5000"));
