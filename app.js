@@ -1,10 +1,21 @@
 const db = require("./db");
 const express = require("express");
 const cors = require("cors");
+const route = require("./authentication");
+const session = require("express-session");
+const auth = require("./middleware");
 
 const app = express();
+app.use(
+  session({
+    secret: "my_secret_key",
+    cookie: { maxAge: 1000 * 60 * 60 * 24 * 5 },
+  })
+);
 app.use(express.json());
 
+// enable authentication routes
+app.use(route);
 // insert new book
 app.post("/book", async (req, res) => {
   const data = req.body;
@@ -22,7 +33,7 @@ app.post("/book", async (req, res) => {
 });
 
 // display all books
-app.get("/book", async (req, res) => {
+app.get("/book", auth, async (req, res) => {
   const [books] = await db.query("SELECT * FROM books");
   res.send(books);
 });
@@ -48,6 +59,10 @@ app.put("/book/:id", async (req, res) => {
 app.delete("/book/:bookId", async (req, res) => {
   await db.query("delete FROM books WHERE id = ?", [req.params.bookId]);
   res.send("Book removed !");
+});
+
+app.use((req, res) => {
+  res.status(404).send("Rouute not found in our application");
 });
 
 app.listen(6000, () => {
